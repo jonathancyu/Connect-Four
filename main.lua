@@ -5,6 +5,8 @@ add settings
 	write toggles
 	add sliders
 	color pallette?	
+
+
  write animations?
 ]]
 -- testing environment
@@ -13,8 +15,8 @@ do
 end
 -- end testing environment
 local connectFour 	= require("connectFour")
-local stack 		= require("stack")
 local color 		= require("color")
+local stack 		= require("stack")
 
 local input 		= {}
 local menu 			= {}
@@ -72,6 +74,7 @@ do
 		if game.state == "playing" then
 			input.column = 1 + math.floor((love.mouse.getX() - _G.padding)/columnSize)
 		elseif game.state == "menu" then
+			menu.step(dt)
 			local mouseX, mouseY = love.mouse.getX(), love.mouse.getY()
 			for k, button in pairs(menu.getLocation().buttons) do
 				if menu.isInBounds(mouseX, mouseY, 
@@ -113,6 +116,11 @@ end
 --menu
 do	
 
+
+	local location = {"main"}
+	local status = "inactive" -- inactive, animating
+	local animation = stack.new()
+	local totalOffset = {x = 0, y = 0}
 	local function tween(start, goal, delta)
 		return start + ((goal-start) * delta)
 	end
@@ -144,10 +152,10 @@ do
 
 		function self.draw()
 			love.graphics.setColor(self.color.r, self.color.g, self.color.b, self.alpha)
-			love.graphics.rectangle("fill", self.x, self.y, width, height) -- make text look better
+			love.graphics.rectangle("fill", totalOffset.x + self.x, totalOffset.y + self.y, width, height) -- make text look better
 			love.graphics.setColor(self.textColor.r, self.textColor.g, self.textColor.b, self.textAlpha)
 			love.graphics.setFont(font)
-			love.graphics.print(text, self.x, self.y)
+			love.graphics.print(text, totalOffset.x + self.x, totalOffset.y + self.y)
 		end
 
 		function self.step(dt, x, y)
@@ -182,8 +190,6 @@ do
 		end
 	end
 
-	local location = {"main"}
-
 	local hierarchy = {
 		main = {
 			name = "main",
@@ -197,7 +203,17 @@ do
 								40,
 								function(x, y)
 									resetButtons()
-									game.state = "playing"
+									status = "animating"
+									animation.push(
+										function(dt)
+											print(totalOffset.x)
+											totalOffset.x = totalOffset.x + 500*dt
+										end, 
+										1, 
+										function()
+											status = "inactive"
+											game.state = "playing"
+										end)
 								end,
 								function(self, dt)
 									tweenMouseOver(self, dt)
@@ -332,8 +348,8 @@ do
 		end
 	end
 
-	function menu.step()
-
+	function menu.step(dt)
+		animation.step(dt)
 	end
 end
 

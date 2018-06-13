@@ -1,27 +1,41 @@
 local stack = {}
 
+local tick = love.timer.getTime
+
 function stack.new(queue)
-	local self = {
-		queue = queue or {}
-	}
+	local order = {}
+	local currentstart
+	local currentfunc
 
-	local events = {}
-
-	function self.push(name, func)
-		table.insert(self.queue, name)
-		events[name] = func
+	local function push(func, dur, endfunc)
+		table.insert(order, {func=func, dur=dur, endfunc=endfunc})
 	end
 
-	function self.pop()
-		events[queue[1]]()
-		events[queue[1]] = nil
-		table.remove(queue, 1)
+	local function step(dt)
+		if currentfunc then
+			if tick() - currentstart > currentfunc.dur then
+				table.remove(order, 1)
+				currentfunc.endfunc(dt)
+				currentfunc = nil
+			else
+				currentfunc.func(dt)
+			end
+		else
+			if order[1] then
+				currentfunc = order[1]
+				currentstart = tick()
+				step(dt)
+			end
+		end
 	end
 
-	function self.clear()
-		for k, v in pairs(events) do events[k] = nil end
-		for k, v in pairs(self.queue) do self.queue[k] = nil end
+	local function clear()
+		for i, v in pairs(order) do
+			table.remove(order, i)
+		end
 	end
 
-	return self
+	return {push=push, pop=pop, clear=clear, step=step}
 end
+
+return stack
